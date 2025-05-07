@@ -151,7 +151,7 @@ def generate_moon(rng: random.Random) -> Spob:
 
 
 def draw_star():
-    width = 1000
+    width = 2000
     d = drawsvg.Drawing(
         width,
         width,
@@ -165,7 +165,8 @@ def draw_star():
 
     def mass_to_radius(m):
         #return ((width / 8) * m) / (150 * SOLAR_MASS)
-        return ((width / 8) * m) / (300 * SOLAR_MASS)
+        FACTOR = 3
+        return ((width / 8) * m) / (150 * SOLAR_MASS) / FACTOR
 
     star1 = Spob(
         id=str(uuid.uuid4()),
@@ -217,10 +218,11 @@ def draw_star():
     hill2 = orbit1.semi_major * math.pow(star1.mass / (3 * star1.mass + barycenter.mass), 1/3)
 
     rocheb = max(orbit1.semi_major + hill1, orbit2.semi_major + hill2) * 1.26
+    wiggle = lambda x: x / 100
     coords1 = [
         Point(
-            x=orbit1.semi_major * math.cos(t * (math.pi * 2 / 100)),
-            y=orbit1.semi_minor * math.sin(t * (math.pi * 2 / 100)),
+            x=orbit1.semi_major * math.cos(wiggle(t) * math.pi * 2),
+            y=orbit1.semi_minor * math.sin(wiggle(t) * math.pi * 2),
         ) for t in range(0, 101)
     ]
     coords2 = [
@@ -229,6 +231,8 @@ def draw_star():
             y=orbit2.semi_minor * math.sin(math.atan2(c.y, c.x) + math.pi),
         ) for c in coords1
     ]
+
+    starsystem = drawsvg.Group(id='starsystem', transform=f'rotate({random.random() * 360})')
 
     group1 = drawsvg.Group(
         id='group1',
@@ -242,7 +246,7 @@ def draw_star():
         ';'.join(map(str, [Point(x=p.x - (orbit1.semi_major * eccentricity), y=p.y) for p in coords1])),
         repeatCount='indefinite',
     ))
-    d.append(group1)
+    starsystem.append(group1)
     group2 = drawsvg.Group(
         id='group2',
         fill_opacity='0',
@@ -255,7 +259,7 @@ def draw_star():
         ';'.join(map(str, [Point(x=p.x + (orbit2.semi_major * eccentricity), y=p.y) for p in coords2])),
         repeatCount='indefinite',
     ))
-    d.append(group2)
+    starsystem.append(group2)
 
     # hill spheres
     group1.append(drawsvg.Circle(
@@ -272,7 +276,7 @@ def draw_star():
     ))
 
     # orbits
-    d.append(drawsvg.Ellipse(
+    starsystem.append(drawsvg.Ellipse(
         -(orbit1.semi_major * eccentricity),
         0,
         orbit1.semi_major,
@@ -280,7 +284,7 @@ def draw_star():
         fill_opacity='0',
         stroke='grey',
     ))
-    d.append(drawsvg.Ellipse(
+    starsystem.append(drawsvg.Ellipse(
         orbit2.semi_major * eccentricity,
         0,
         orbit2.semi_major,
@@ -328,6 +332,7 @@ def draw_star():
     # barycenter
     d.append(drawsvg.Line(-5, 0, 5, 0, stroke='black', fill_opacity='0'))
     d.append(drawsvg.Line(0, -5, 0, 5, stroke='black', fill_opacity='0'))
+    d.append(starsystem)
 
     d.save_html('stars.html')
 
