@@ -5,6 +5,7 @@ from sqlalchemy.types import TypeDecorator, BLOB
 from starsight.database import Base
 from typing import Optional
 import enum
+import math
 import uuid
 
 
@@ -56,7 +57,14 @@ class Spob(Base):
     semi_major_axis: Mapped[float] = mapped_column(Float, default=0.0)
     eccentricity: Mapped[float] = mapped_column(Float, default= 0.0)
     anomaly: Mapped[float] = mapped_column(Float, default=0.0)
+    radius: Mapped[float] = mapped_column(Float, default=1)
 
     @property
     def semi_minor_axis(self) -> float:
         return self.semi_major_axis * ((1.0 - (self.eccentricity**2))**0.5)
+
+    def roche_limit(self) -> float:
+        return self.radius * 1.26  # TODO constants
+
+    def hill_radius(self, main_mass: float) -> float:
+        return self.semi_major * math.pow(self.mass / (3 * self.mass + main_mass), 1/3)
