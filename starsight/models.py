@@ -36,6 +36,11 @@ class Galaxy(Base):
     seed = Column(GUID(), default=uuid.uuid4, nullable=False)
     name = Column(String)
 
+    @property
+    def snoise_base(self) -> int:
+        return self.seed.int & 0xFFFFF
+
+
 hyperlink = Table(
     'hyperlink',
     Base.metadata,
@@ -62,6 +67,9 @@ class System(Base):
 
     def are_neighbors(self, other: 'System', distance: float) -> bool:
         return (distance * distance) > (((self.x - other.x) ** 2) + ((self.y - other.y) ** 2))
+
+    def bucket(self, chunk_size) -> tuple[int, int]:
+        return int(self.x / chunk_size), int(self.y / chunk_size)
 
 
 class SpobType(enum.Enum):

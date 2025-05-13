@@ -12,6 +12,7 @@ CELL_SIZE = 20
 BASE = 32
 OFFSET_X = 0
 OFFSET_Y = 0
+BUFFER = CELL_SIZE * 2
 
 MAX_JUMP = 100
 LINK_THRESHOLD = 0.5
@@ -95,12 +96,26 @@ galaxy = Galaxy(
     name='wat',
 )
 
-def generate_starfield(canvas):
-    canvas.delete('all')
+def generate_starfield():
     from starsight.controllers.generation import generate_star_field
-    systems = generate_star_field(galaxy, round(OFFSET_X - WIDTH/2), round(OFFSET_Y - HEIGHT/2), WIDTH, HEIGHT)
+    #systems = generate_star_field(galaxy, round(OFFSET_X - WIDTH/2), round(OFFSET_Y - HEIGHT/2), WIDTH, HEIGHT)
+    systems = generate_star_field(galaxy, -10000, -10000, 10000, 10000)
+    print(len(systems))
+    return systems
 
+
+def draw_starfield(canvas, systems):
+    canvas.delete('all')
     for system in systems:
+        if system.x > OFFSET_X + BUFFER + WIDTH/2:
+            continue
+        if system.y > OFFSET_Y + BUFFER + HEIGHT/2:
+            continue
+        if system.x < OFFSET_X - BUFFER - WIDTH/2:
+            continue
+        if system.y < OFFSET_Y - BUFFER - HEIGHT/2:
+            continue
+
         for link in system.hyperlinks:
             x1, y1 = c2s(system.x - OFFSET_X, system.y - OFFSET_Y)
             x2, y2 = c2s(link.x - OFFSET_X, link.y - OFFSET_Y)
@@ -113,37 +128,38 @@ def generate_starfield(canvas):
         )
 
 
-def move(canvas, dx, dy):
+def move(canvas, systems, dx, dy):
     global OFFSET_X
     global OFFSET_Y
     OFFSET_X += dx
     OFFSET_Y += dy
-    generate_starfield(canvas)
+    draw_starfield(canvas, systems)
 
 
 def new_base(_):
     global BASE
     BASE +=1
 
-def zoom(canvas, f):
+def zoom(canvas, systems, f):
     global SCALE
     SCALE *= f
-    generate_starfield(canvas)
+    draw_starfield(canvas, systems)
 
 
 def main():
     root = tkinter.Tk()
     canvas = tkinter.Canvas(root, width=WIDTH, height=HEIGHT, bg='black')
     canvas.pack()
-    generate_starfield(canvas)
+    s = generate_starfield()
+    draw_starfield(canvas, s)
     STEP = 20
-    root.bind('w', lambda _: move(canvas, 0, STEP))
-    root.bind('s', lambda _: move(canvas, 0, -STEP))
-    root.bind('a', lambda _: move(canvas, -STEP, 0))
-    root.bind('d', lambda _: move(canvas, STEP, 0))
+    root.bind('w', lambda _: move(canvas, s, 0, STEP))
+    root.bind('s', lambda _: move(canvas, s, 0, -STEP))
+    root.bind('a', lambda _: move(canvas, s, -STEP, 0))
+    root.bind('d', lambda _: move(canvas, s, STEP, 0))
     root.bind('q', new_base)
-    root.bind('[', lambda _: zoom(canvas, 0.8))
-    root.bind(']', lambda _: zoom(canvas, 1.1))
+    root.bind('[', lambda _: zoom(canvas, s, 0.8))
+    root.bind(']', lambda _: zoom(canvas, s, 1.1))
     root.mainloop()
 
 

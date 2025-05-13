@@ -39,6 +39,23 @@ def system_designation(guid: str) -> str:
     return f'{letters}-{numbers}'
 
 
+class Starfield:
+
+    def __init__(self, galaxy: Galaxy):
+        self._galaxy: Galaxy = galaxy
+        self._cell_size = 20
+        self._star_threshold = 0.7
+        self._max_jump_dist = 100
+        self._jump_threshold = 0.5
+
+        self._snoise_base = self._galaxy.seed.int & 0xFFFFF
+
+        self._systems: dict[System] = {}
+
+    def generate_star_field(self) -> set[System]:
+        ...
+
+
 def generate_star_field(galaxy: Galaxy, window_x: int, window_y: int, width: int, height: int) -> list[System]:
     """
     window_x: x coord in cartesian plane
@@ -48,35 +65,51 @@ def generate_star_field(galaxy: Galaxy, window_x: int, window_y: int, width: int
     systems = []
     hyperlinks = []
     seed = galaxy.seed
-    base = seed.int & 0xFFF
+    base = galaxy.snoise_base
+    buckets = {}
 
     step = GENERATION_PARAMS['galaxy_cell_size']
     for x in range(window_x, window_x + width, step):
         for y in range(window_y, window_y + height, step):
+            print(x, y)
             value = (noise.snoise2(x, y, octaves=_OCTAVES, base=base) + 1.0) / 2.0
 
             if value < GENERATION_PARAMS['star_threshold']:
                 continue
             guid = uuid.uuid5(seed, f'{x},{y}')
             # TODO bake in some semblance of what the stars will be like so it can be used for radius and color
-            systems.append(System(
+            system = System(
                 id=guid,
                 galaxy_id=galaxy.id,
                 name=system_designation(str(guid)),
                 x=x,
                 y=y,
-            ))
+            )
+            systems.append(system)
+            buckets.setdefault(system.bucket(GENERATION_PARAMS['max_jump_dist']), []).append(system)
+    print(len(systems))
+    print(len(buckets))
 
-    # TODO only show links for "explored" systems (ie in the DB)
-    for i, system in enumerate(systems):
-        for s2 in systems[i:]:
-            if not system.are_neighbors(s2, GENERATION_PARAMS['max_jump_dist']):
-                continue
-            nx = (system.x + s2.x) / 2
-            ny = (system.y + s2.y) / 2
-            value = (noise.snoise2(nx, ny, octaves=_OCTAVES, base=base) + 1.0) / 2.0
-            if value < GENERATION_PARAMS['jump_threshold']:
-                continue
-            system.hyperlinks.append(s2)
+    for coords, bucket in buckets.items():
+        brothers = bucket[:]
+        brothers.extend(buckets.get((coords[0]-1, coords[1]), []))
+        brothers.extend(buckets.get((coords[0]+1, coords[1]), []))
+        brothers.extend(buckets.get((coords[0]-1, coords[1]+1), []))
+        brothers.extend(buckets.get((coords[0], coords[1]+1), []))
+        brothers.extend(buckets.get((coords[0]+1, coords[1]+1), []))
+        brothers.extend(buckets.get((coords[0]-1, coords[1]-1), []))
+        brothers.extend(buckets.get((coords[0], coords[1]-1), []))
+        brothers.extend(buckets.get((coords[0]+1, coords[1]-1), []))
+        for i, s1 in enumerate(brothers):
+            for s2 in brothers[i:]:
+                if not s1.are_neighbors(s2, GENERATION_PARAMS['max_jump_dist']):
+                    continue
+                nx = (s1.x + s2.x) / 2
+                ny = (s1.y + s2.y) / 2
+                value = (noise.snoise2(nx, ny, octaves=_OCTAVES, base=base) + 1.0) / 2.0
+                if value < GENERATION_PARAMS['jump_threshold']:
+                    continue
+                s1.hyperlinks.append(s2)
+
 
     return systems
