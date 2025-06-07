@@ -1,5 +1,6 @@
 import random
 from collections import namedtuple
+import functools
 from typing import Optional
 from starsight.models import Spob, SpobType, System, Galaxy
 import uuid
@@ -34,8 +35,8 @@ GREEK_ALPHA = ['alpha', 'beta', 'gamma', 'delta', 'epsilon', 'zeta', 'eta', 'the
 
 
 def system_designation(guid: str) -> str:
-    letters = ''.join(set([l for l in guid if l in 'abcdef'])).upper()
-    numbers = ''.join([n for n in guid if n in '1234567890'])
+    letters = ''.join({l:'' for l in guid if l in 'abcdef'}.keys()).upper()
+    numbers = ''.join({n:'' for n in guid if n in '1234567890'}.keys())
     return f'{letters}-{numbers}'
 
 
@@ -72,7 +73,7 @@ def generate_star_field(galaxy: Galaxy, window_x: int, window_y: int, width: int
     for x in range(window_x, window_x + width, step):
         for y in range(window_y, window_y + height, step):
             print(x, y)
-            value = (noise.snoise2(x, y, octaves=_OCTAVES, base=base) + 1.0) / 2.0
+            value = (noise.snoise3(x, y, base, octaves=_OCTAVES) + 1.0) / 2.0
 
             if value < GENERATION_PARAMS['star_threshold']:
                 continue
@@ -106,7 +107,7 @@ def generate_star_field(galaxy: Galaxy, window_x: int, window_y: int, width: int
                     continue
                 nx = (s1.x + s2.x) / 2
                 ny = (s1.y + s2.y) / 2
-                value = (noise.snoise2(nx, ny, octaves=_OCTAVES, base=base) + 1.0) / 2.0
+                value = (noise.snoise3(nx, ny, base, octaves=_OCTAVES) + 1.0) / 2.0
                 if value < GENERATION_PARAMS['jump_threshold']:
                     continue
                 s1.hyperlinks.append(s2)

@@ -42,52 +42,6 @@ def dist(s1, s2, m):
     return (m * m) > (((s1.x - s2.x) ** 2) + ((s1.y - s2.y) ** 2))
 
 
-def generate_starfield2(canvas, root=None):
-    canvas.delete('all')
-
-    stars = []
-
-    step = round(CELL_SIZE * SCALE)
-
-    for y in range(0, int(HEIGHT/SCALE), step):
-        for x in range(0, int(WIDTH/SCALE), step):
-            nx, ny = s2c(x, y)
-            nx = (nx + OFFSET_X - (OFFSET_X % step))
-            ny = (ny + OFFSET_Y - (OFFSET_Y % step))
-            jx, jy = jitter(nx), jitter(ny)
-            nx += jx
-            ny += jy
-            value = (noise.snoise2(nx * SCALE, ny * SCALE, octaves=OCTAVES, base=BASE) + 1.0) / 2.0
-
-            if value < THRESHOLD:
-                continue
-            brightness = (value - THRESHOLD) / (1 - THRESHOLD)
-            r = max(2.0, brightness * 7)
-
-            stars.append(Star(nx, ny, r))
-
-    for i, star in enumerate(stars):
-        for s2 in stars[i:]:
-            if not dist(star, s2, MAX_JUMP*SCALE):
-                continue
-            nx = (star.x + s2.x) / 2
-            ny = (star.y + s2.y) / 2
-            value = (noise.snoise2(nx*SCALE, ny*SCALE, octaves=OCTAVES, base=BASE) + 1.0) / 2.0
-            if value < LINK_THRESHOLD:
-                continue
-            x1, y1 = c2s(star.x - OFFSET_X, star.y - OFFSET_Y)
-            x2, y2 = c2s(s2.x - OFFSET_X, s2.y - OFFSET_Y)
-
-            canvas.create_line(x1, y1, x2, y2, fill='grey', width='1')
-
-    for star in stars:
-        dx, dy = c2s(star.x - OFFSET_X, star.y - OFFSET_Y)
-        canvas.create_oval(
-            dx - star.r, dy - star.r,
-            dx + star.r, dy + star.r,
-            fill='white', outline='',
-        )
-
 from starsight.models import Galaxy
 import uuid
 galaxy = Galaxy(
@@ -125,6 +79,13 @@ def draw_starfield(canvas, systems):
             dx - 2, dy - 2,
             dx + 2, dy + 2,
             fill='white', outline='',
+        )
+        canvas.create_text(
+            dx,
+            dy,
+            text=f"{system.name}",
+            font=("Arial", 8),
+            fill="white",
         )
 
 
